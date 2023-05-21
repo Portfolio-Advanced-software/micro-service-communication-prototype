@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	streaming.Produce()
+	streaming.Consume()
 }

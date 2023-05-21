@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -19,14 +22,22 @@ func Consume() {
 	// Create a new Kafka consumer
 	consumer := kafka.NewReader(consumerConfig)
 
-	// Continuously read messages from the Kafka topic
-	for {
-		message, err := consumer.ReadMessage(context.Background())
-		if err != nil {
-			log.Fatal("Failed to read message:", err)
-		}
+	// Set up signal handling to gracefully stop the consumer
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
-		// Process the received message
-		fmt.Printf("Received message: %s\n", string(message.Value))
+	// Read a single message from the Kafka topic
+	message, err := consumer.FetchMessage(context.Background())
+	if err != nil {
+		log.Fatal("Failed to fetch message:", err)
 	}
+
+	// Process the received message
+	fmt.Printf("Received message: %s\n", string(message.Value))
+
+	// Close the consumer and release resources
+	consumer.Close()
+
+	// Send a termination signal to exit immediately
+	signals <- syscall.SIGTERM
 }
